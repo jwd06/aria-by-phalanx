@@ -36,6 +36,11 @@ yarn-error.log*
 # vercel
 .vercel
 
+# local-only planning/design docs
+/PLAN.md
+/DESIGN.md
+/CLAUDE.md
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
