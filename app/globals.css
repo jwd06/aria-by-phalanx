@@ -1,26 +1,120 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Colors */
+  --color-berry-lipstick: #cc3363;
+  --color-pitch-black: #14110f;
+  --color-graphite: #34312d;
+  --color-pale-oak: #d9c5b2;
+  --color-platinum: #f3f3f4;
+
+  --background: var(--color-pitch-black);
+  --foreground: var(--color-platinum);
+
+  /* Spacing (4px base unit) */
+  --spacing-12: 12px;
+  --spacing-16: 16px;
+  --spacing-20: 20px;
+  --spacing-24: 24px;
+  --spacing-28: 28px;
+  --spacing-32: 32px;
+  --spacing-36: 36px;
+  --spacing-40: 40px;
+  --spacing-48: 48px;
+  --spacing-64: 64px;
+  --spacing-80: 80px;
+  --spacing-120: 120px;
+  --spacing-140: 140px;
+  --spacing-160: 160px;
+  --spacing-164: 164px;
+
+  /* Radius */
+  --radius-card: 16px;
+  --radius-small: 6px;
+  --radius-button: 6px;
+
+  /* Type scale */
+  --text-caption: 10px;
+  --text-caption--line-height: 1.4;
+  --text-caption--letter-spacing: 1.5px;
+
+  --text-body: 16px;
+  --text-body--line-height: 1.4;
+
+  --text-subheading: 24px;
+  --text-subheading--line-height: 1.3;
+  --text-subheading--letter-spacing: -0.48px;
+
+  --text-heading: 36px;
+  --text-heading--line-height: 1;
+
+  --text-heading-lg: 61px;
+  --text-heading-lg--line-height: 1;
+  --text-heading-lg--letter-spacing: -2.44px;
+
+  --text-display: 96px;
+  --text-display--line-height: 1;
+  --text-display--letter-spacing: -3.84px;
 }
 
 @theme inline {
+  --color-berry-lipstick: var(--color-berry-lipstick);
+  --color-pitch-black: var(--color-pitch-black);
+  --color-graphite: var(--color-graphite);
+  --color-pale-oak: var(--color-pale-oak);
+  --color-platinum: var(--color-platinum);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-matter: var(--font-matter), Inter, "DM Sans", sans-serif;
+  --font-arial: Arial, Helvetica, sans-serif;
+
+  --spacing-12: var(--spacing-12);
+  --spacing-16: var(--spacing-16);
+  --spacing-20: var(--spacing-20);
+  --spacing-24: var(--spacing-24);
+  --spacing-28: var(--spacing-28);
+  --spacing-32: var(--spacing-32);
+  --spacing-36: var(--spacing-36);
+  --spacing-40: var(--spacing-40);
+  --spacing-48: var(--spacing-48);
+  --spacing-64: var(--spacing-64);
+  --spacing-80: var(--spacing-80);
+  --spacing-120: var(--spacing-120);
+  --spacing-140: var(--spacing-140);
+  --spacing-160: var(--spacing-160);
+  --spacing-164: var(--spacing-164);
+
+  --radius-card: var(--radius-card);
+  --radius-small: var(--radius-small);
+  --radius-button: var(--radius-button);
+
+  --text-caption: var(--text-caption);
+  --text-caption--line-height: var(--text-caption--line-height);
+  --text-caption--letter-spacing: var(--text-caption--letter-spacing);
+
+  --text-body: var(--text-body);
+  --text-body--line-height: var(--text-body--line-height);
+
+  --text-subheading: var(--text-subheading);
+  --text-subheading--line-height: var(--text-subheading--line-height);
+  --text-subheading--letter-spacing: var(--text-subheading--letter-spacing);
+
+  --text-heading: var(--text-heading);
+  --text-heading--line-height: var(--text-heading--line-height);
+
+  --text-heading-lg: var(--text-heading-lg);
+  --text-heading-lg--line-height: var(--text-heading-lg--line-height);
+  --text-heading-lg--letter-spacing: var(--text-heading-lg--letter-spacing);
+
+  --text-display: var(--text-display);
+  --text-display--line-height: var(--text-display--line-height);
+  --text-display--letter-spacing: var(--text-display--letter-spacing);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-matter);
 }
