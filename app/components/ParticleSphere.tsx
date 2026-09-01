@@ -2,6 +2,12 @@
 
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
 
 export interface ParticleSphereProps {
   /** Number of particles across the sphere surface. 1,000–12,000, default 6,000. */
@@ -26,6 +32,24 @@ export interface ParticleSphereProps {
   repulsionStrength?: number;
   /** Force of the one-shot scatter burst on pointer/click/touch contact. */
   scatterForce?: number;
+  /**
+   * CSS selector for the element whose scroll progress dissolves the sphere
+   * into an ambient particle field. Omit to disable all scroll behaviour.
+   */
+  scrollTarget?: string;
+  /** How far the dissolved field spreads, in sphere radii. */
+  dissolveSpread?: number;
+  /** Material opacity at full dissolve. */
+  dissolveOpacity?: number;
+  /** Where the sphere sits inside a full-bleed canvas. */
+  anchor?: "right" | "center";
+  /** Keep the sphere at a constant on-screen diameter regardless of canvas size. */
+  targetDiameterPx?: number;
+  /**
+   * How far the settled field parallaxes as the page scrolls below the hero,
+   * as a fraction of the scrolled distance. 0 disables the drift.
+   */
+  driftStrength?: number;
   className?: string;
 }
 
@@ -41,6 +65,10 @@ const DEFAULTS = {
   repulsionRadius: 0.16,
   repulsionStrength: 0.2,
   scatterForce: 0.45,
+  dissolveSpread: 2.6,
+  dissolveOpacity: 0.34,
+  anchor: "center" as const,
+  driftStrength: 0.12,
 };
 
 function fibonacciSphere(count: number): Float32Array {
@@ -57,6 +85,36 @@ function fibonacciSphere(count: number): Float32Array {
     positions[i * 3 + 2] = z;
   }
   return positions;
+}
+
+/** Small deterministic PRNG so the ambient field is identical on every load. */
+function mulberry32(seed: number): () => number {
+  let a = seed;
+  return function () {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * Per-particle resting places for the dissolved state: a wide, shallow slab
+ * biased behind the sphere plane so size attenuation pushes them into depth.
+ * Also returns a per-particle delay so the sphere breaks apart in waves.
+ */
+function scatterField(count: number, spread: number) {
+  const targets = new Float32Array(count * 3);
+  const delays = new Float32Array(count);
+  const rand = mulberry32(0x5eed1e);
+  for (let i = 0; i < count; i++) {
+    targets[i * 3] = (rand() * 2 - 1) * spread * 1.9;
+    targets[i * 3 + 1] = (rand() * 2 - 1) * spread * 0.8;
+    targets[i * 3 + 2] = -1.5 + rand() * 2;
+    delays[i] = rand() * 0.3;
+  }
+  return { targets, delays };
 }
 
 function createGlowTexture(): THREE.Texture {
@@ -105,6 +163,19 @@ function raySphereIntersect(
 const clamp = (v: number, min: number, max: number) =>
   Math.min(max, Math.max(min, v));
 
+const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
+
+const smoothstep = (t: number) => t * t * (3 - 2 * t);
+
+/** How much a particle dims once fully dispersed. Higher = fainter dust. */
+const DISSOLVE_FADE = 0.45;
+
+/** How quickly the dissolve chases the raw scroll position. Higher = snappier. */
+const DISSOLVE_RESPONSE = 11;
+
+/** Fraction of the idle spin the field keeps once fully dispersed. */
+const DISSOLVED_SPIN = 0.45;
+
 export default function ParticleSphere(props: ParticleSphereProps) {
   const opts = { ...DEFAULTS, ...props };
   const containerRef = useRef<HTMLDivElement>(null);
@@ -126,7 +197,9 @@ export default function ParticleSphere(props: ParticleSphereProps) {
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
-    camera.position.set(0, 0, 3.4);
+    /** Resting camera distance; the dissolve pulls back from here. */
+    const cameraBaseZ = 3.4;
+    camera.position.set(0, 0, cameraBaseZ);
 
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
@@ -146,26 +219,63 @@ export default function ParticleSphere(props: ParticleSphereProps) {
     const drawPositions = new Float32Array(basePositions);
     const displacement = new Float32Array(count);
 
+    const { targets: scatterTargets, delays: scatterDelay } = scatterField(
+      count,
+      optsRef.current.dissolveSpread
+    );
+    const drawColors = new Float32Array(count * 3);
+    const baseColor = new THREE.Color(optsRef.current.color);
+    for (let i = 0; i < count; i++) {
+      drawColors[i * 3] = baseColor.r;
+      drawColors[i * 3 + 1] = baseColor.g;
+      drawColors[i * 3 + 2] = baseColor.b;
+    }
+
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute(
       "position",
       new THREE.BufferAttribute(drawPositions, 3)
     );
+    geometry.setAttribute("color", new THREE.BufferAttribute(drawColors, 3));
 
     const material = new THREE.PointsMaterial({
       size: optsRef.current.particleSize,
       map: createGlowTexture(),
       transparent: true,
       opacity: optsRef.current.opacity,
-      color: new THREE.Color(optsRef.current.color),
+      vertexColors: true,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
       sizeAttenuation: true,
     });
 
     const points = new THREE.Points(geometry, material);
+    // Particles travel far outside the geometry's initial bounding sphere once
+    // dissolved, so leave culling to the renderer's per-pixel work instead.
+    points.frustumCulled = false;
     group.add(points);
     group.scale.setScalar(optsRef.current.sphereScale);
+
+    // --- Scroll dissolve state ---
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
+    /** Raw ScrollTrigger progress across the hero. */
+    let scrollProgress = 0;
+    /** Smoothed value the render loop actually draws. */
+    let dissolve = 0;
+    /** Document scroll in pixels, used for the settled field's parallax. */
+    let scrollPx = 0;
+    /** Scroll offset at which the dissolve completes; drift starts after it. */
+    let driftOrigin = 0;
+    /** Current parallax offset in world units. */
+    let drift = 0;
+    /** Base y the resize handler anchored the sphere to. */
+    let anchorY = 0;
+    /** World units per CSS pixel at the sphere plane. */
+    let worldPerPixel = 0;
+    /** Ceiling the parallax eases into, so the field never scrolls away. */
+    let maxDrift = 0;
 
     // --- Interaction state ---
     const pointer = { ndc: new THREE.Vector2(0, 0), active: false };
@@ -173,6 +283,9 @@ export default function ParticleSphere(props: ParticleSphereProps) {
     let dragging = false;
     let dragLast = { x: 0, y: 0, t: 0 };
     const momentum = { x: 0, y: 0 };
+
+    /** True while any particle is still recovering from cursor displacement. */
+    let displacementActive = false;
 
     const raycaster = new THREE.Raycaster();
     const invQuat = new THREE.Quaternion();
@@ -185,14 +298,14 @@ export default function ParticleSphere(props: ParticleSphereProps) {
         raycaster.ray.origin,
         raycaster.ray.direction,
         group.position,
-        optsRef.current.sphereScale
+        fittedScale
       );
       if (!worldPoint) return null;
       invQuat.copy(group.quaternion).invert();
       return worldPoint
         .sub(group.position)
         .applyQuaternion(invQuat)
-        .divideScalar(optsRef.current.sphereScale)
+        .divideScalar(fittedScale)
         .normalize();
     }
 
@@ -209,6 +322,7 @@ export default function ParticleSphere(props: ParticleSphereProps) {
         if (d > cosRadius) {
           const influence = (d - cosRadius) / (1 - cosRadius);
           displacement[i] += influence * optsRef.current.scatterForce;
+          displacementActive = true;
         }
       }
     }
@@ -279,6 +393,11 @@ export default function ParticleSphere(props: ParticleSphereProps) {
     dom.addEventListener("pointercancel", onPointerUp);
 
     // --- Resize ---
+    /** Half the visible world height at the sphere plane, per unit of distance. */
+    const halfFovTan = Math.tan((camera.fov / 2) * THREE.MathUtils.DEG2RAD);
+    /** Scale that makes the sphere read at a fixed pixel diameter. */
+    let fittedScale = optsRef.current.sphereScale;
+
     function handleResize() {
       const width = container!.clientWidth;
       const height = container!.clientHeight;
@@ -286,10 +405,68 @@ export default function ParticleSphere(props: ParticleSphereProps) {
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
       renderer.setSize(width, height, false);
+
+      const o = optsRef.current;
+      const visibleHeight = 2 * halfFovTan * cameraBaseZ;
+      const visibleWidth = visibleHeight * camera.aspect;
+
+      if (o.targetDiameterPx) {
+        // World radius that projects to targetDiameterPx at the sphere plane.
+        fittedScale = (o.targetDiameterPx / height) * (visibleHeight / 2);
+      } else {
+        fittedScale = o.sphereScale;
+      }
+
+      worldPerPixel = visibleHeight / height;
+      maxDrift = visibleHeight * 0.35;
+
+      // Below the lg breakpoint the page collapses to one column, so the orb
+      // centres itself under the headline instead of sitting in the right half.
+      const wide = width >= 1024;
+      group.position.x =
+        o.anchor === "right" && wide ? visibleWidth * 0.25 : 0;
+      anchorY = wide ? 0 : -visibleHeight * 0.12;
+      group.position.y = anchorY + drift;
     }
     const resizeObserver = new ResizeObserver(handleResize);
     resizeObserver.observe(container);
     handleResize();
+
+    // --- Scroll dissolve + page-wide drift ---
+    const triggers: ScrollTrigger[] = [];
+    if (optsRef.current.scrollTarget) {
+      // The sphere breaks apart across the hero; the field it becomes then
+      // persists behind every section below.
+      const dissolveTrigger = ScrollTrigger.create({
+        trigger: optsRef.current.scrollTarget,
+        start: "top top",
+        end: "bottom top",
+        onUpdate: (self) => {
+          scrollProgress = self.progress;
+        },
+        // `end` moves when the layout reflows, so re-read it rather than
+        // caching a stale drift origin.
+        onRefresh: (self) => {
+          driftOrigin = self.end;
+        },
+      });
+      scrollProgress = dissolveTrigger.progress;
+      dissolve = scrollProgress;
+      driftOrigin = dissolveTrigger.end;
+      triggers.push(dissolveTrigger);
+
+      // Once settled, the field parallaxes against the rest of the document
+      // so lower sections feel like they travel through it.
+      const driftTrigger = ScrollTrigger.create({
+        start: 0,
+        end: "max",
+        onUpdate: (self) => {
+          scrollPx = self.scroll();
+        },
+      });
+      scrollPx = driftTrigger.scroll();
+      triggers.push(driftTrigger);
+    }
 
     // --- Animation loop ---
     const clock = new THREE.Clock();
@@ -300,6 +477,39 @@ export default function ParticleSphere(props: ParticleSphereProps) {
       const delta = Math.min(clock.getDelta(), 0.05);
       const o = optsRef.current;
 
+      // Ease toward the raw scroll position so wheel steps don't judder.
+      const prevDissolve = dissolve;
+      dissolve = reduceMotion
+        ? scrollProgress
+        : dissolve +
+          (scrollProgress - dissolve) * Math.min(1, delta * DISSOLVE_RESPONSE);
+      if (Math.abs(scrollProgress - dissolve) < 0.0005) dissolve = scrollProgress;
+
+      // Below the hero the settled field drifts at a fraction of scroll speed.
+      const driftPx = Math.max(0, scrollPx - driftOrigin);
+      const rawDrift = driftPx * o.driftStrength * worldPerPixel;
+      // Saturating curve: linear at first, easing into maxDrift on long pages.
+      const driftTarget =
+        maxDrift > 0 ? Math.tanh(rawDrift / maxDrift) * maxDrift * dissolve : 0;
+      drift = reduceMotion
+        ? driftTarget
+        : drift + (driftTarget - drift) * Math.min(1, delta * 6);
+      group.position.y = anchorY - drift;
+
+      // The sphere is only grabbable while it is still a sphere; once it is
+      // page-wide ambience the canvas must not intercept clicks on content.
+      // The container may be pointer-events-none; the canvas opts itself in.
+      const interactive = dissolve < 0.5;
+      const pointerEvents = interactive ? "auto" : "none";
+      if (dom.style.pointerEvents !== pointerEvents) {
+        dom.style.pointerEvents = pointerEvents;
+        if (!interactive) {
+          hovering = false;
+          pointer.active = false;
+          dragging = false;
+        }
+      }
+
       if (dragging) {
         // rotation already applied directly in onPointerMove
       } else if (Math.abs(momentum.x) + Math.abs(momentum.y) > 0.0002) {
@@ -307,12 +517,17 @@ export default function ParticleSphere(props: ParticleSphereProps) {
         group.rotation.x = clamp(group.rotation.x + momentum.y, -1.2, 1.2);
         momentum.x *= 0.94;
         momentum.y *= 0.94;
-      } else if (!(o.pauseOnHover && hovering)) {
-        group.rotation.y += o.rotationSpeed * o.rotationDirection * delta;
+      } else if (!(o.pauseOnHover && hovering) && !reduceMotion) {
+        // Let the field settle as it disperses instead of spinning like a slab.
+        group.rotation.y +=
+          o.rotationSpeed *
+          o.rotationDirection *
+          delta *
+          (1 - (1 - DISSOLVED_SPIN) * dissolve);
       }
 
       let contactActive = false;
-      if (pointer.active) {
+      if (pointer.active && interactive) {
         const dir = computeContactDir(pointer.ndc);
         if (dir) {
           contactDir.copy(dir);
@@ -330,37 +545,76 @@ export default function ParticleSphere(props: ParticleSphereProps) {
       const cosRepulsion = Math.cos(o.repulsionRadius);
       const decay = Math.pow(0.001, delta);
 
-      for (let i = 0; i < count; i++) {
-        const bx = basePositions[i * 3];
-        const by = basePositions[i * 3 + 1];
-        const bz = basePositions[i * 3 + 2];
+      // Particle positions are a pure function of dissolve + displacement, so
+      // once both are settled the buffer can be left alone and only the group
+      // transform animates. This keeps the page-wide field close to free.
+      const needsParticleUpdate =
+        dissolve !== prevDissolve || contactActive || displacementActive;
+      let stillDisplaced = false;
 
-        const dotCam = bx * camLocalDir.x + by * camLocalDir.y + bz * camLocalDir.z;
-        if (dotCam > 0 && contactActive) {
-          const dotContact =
-            bx * contactDir.x + by * contactDir.y + bz * contactDir.z;
-          if (dotContact > cosRepulsion) {
-            const influence = (dotContact - cosRepulsion) / (1 - cosRepulsion);
-            displacement[i] +=
-              influence * o.repulsionStrength * delta * 2.5;
+      if (needsParticleUpdate) {
+        for (let i = 0; i < count; i++) {
+          const bx = basePositions[i * 3];
+          const by = basePositions[i * 3 + 1];
+          const bz = basePositions[i * 3 + 2];
+
+          const dotCam = bx * camLocalDir.x + by * camLocalDir.y + bz * camLocalDir.z;
+          if (dotCam > 0 && contactActive) {
+            const dotContact =
+              bx * contactDir.x + by * contactDir.y + bz * contactDir.z;
+            if (dotContact > cosRepulsion) {
+              const influence = (dotContact - cosRepulsion) / (1 - cosRepulsion);
+              displacement[i] +=
+                influence * o.repulsionStrength * delta * 2.5;
+            }
+          }
+
+          displacement[i] *= decay;
+          if (displacement[i] < 0.0005) displacement[i] = 0;
+          else stillDisplaced = true;
+
+          const r = 1 + displacement[i];
+
+          if (dissolve > 0) {
+            // Staggered break-up: each particle starts leaving at its own delay.
+            const ti = smoothstep(
+              clamp01((dissolve - scatterDelay[i]) / (1 - scatterDelay[i]))
+            );
+            drawPositions[i * 3] =
+              bx * r + (scatterTargets[i * 3] - bx * r) * ti;
+            drawPositions[i * 3 + 1] =
+              by * r + (scatterTargets[i * 3 + 1] - by * r) * ti;
+            drawPositions[i * 3 + 2] =
+              bz * r + (scatterTargets[i * 3 + 2] - bz * r) * ti;
+
+            // Additive blending: a darker vertex colour reads as a dimmer point,
+            // which fades each particle on its own schedule.
+            const fade = 1 - DISSOLVE_FADE * ti;
+            drawColors[i * 3] = baseColor.r * fade;
+            drawColors[i * 3 + 1] = baseColor.g * fade;
+            drawColors[i * 3 + 2] = baseColor.b * fade;
+          } else {
+            drawPositions[i * 3] = bx * r;
+            drawPositions[i * 3 + 1] = by * r;
+            drawPositions[i * 3 + 2] = bz * r;
+            drawColors[i * 3] = baseColor.r;
+            drawColors[i * 3 + 1] = baseColor.g;
+            drawColors[i * 3 + 2] = baseColor.b;
           }
         }
 
-        displacement[i] *= decay;
-        if (displacement[i] < 0.0005) displacement[i] = 0;
-
-        const r = 1 + displacement[i];
-        drawPositions[i * 3] = bx * r;
-        drawPositions[i * 3 + 1] = by * r;
-        drawPositions[i * 3 + 2] = bz * r;
+        displacementActive = stillDisplaced;
+        geometry.attributes.position.needsUpdate = true;
+        geometry.attributes.color.needsUpdate = true;
       }
-      geometry.attributes.position.needsUpdate = true;
 
-      if (group.scale.x !== o.sphereScale) {
-        group.scale.setScalar(o.sphereScale);
-      }
-      if (material.opacity !== o.opacity) material.opacity = o.opacity;
+      const scale = o.targetDiameterPx ? fittedScale : o.sphereScale;
+      if (group.scale.x !== scale) group.scale.setScalar(scale);
+
+      const opacity = o.opacity + (o.dissolveOpacity - o.opacity) * dissolve;
+      if (material.opacity !== opacity) material.opacity = opacity;
       if (material.size !== o.particleSize) material.size = o.particleSize;
+      camera.position.z = cameraBaseZ + dissolve * 0.8;
 
       renderer.render(scene, camera);
     }
@@ -368,6 +622,7 @@ export default function ParticleSphere(props: ParticleSphereProps) {
 
     return () => {
       cancelAnimationFrame(frameId);
+      triggers.forEach((t) => t.kill());
       resizeObserver.disconnect();
       dom.removeEventListener("pointerenter", onPointerEnter);
       dom.removeEventListener("pointerleave", onPointerLeave);

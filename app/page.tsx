@@ -10,10 +10,52 @@ const PROFESSIONS = [
   "DevOps Engineers",
 ];
 
+const PILLARS = [
+  {
+    index: "01",
+    title: "ATS-friendly resume builder",
+    body: "Upload a PDF or DOCX and Aria parses it into structured sections — or build one from scratch in the editor. Every export stays machine-readable.",
+  },
+  {
+    index: "02",
+    title: "Tailoring with nothing fabricated",
+    body: "Paste a job description and Aria rephrases, reorders, and re-emphasises what your resume already says. Every change lands as a diff you accept or reject. Nothing is auto-applied.",
+  },
+  {
+    index: "03",
+    title: "Resume-grounded interview practice",
+    body: "Technical and behavioural questions drawn from your own resume and target role. Weak topics resurface until they aren't weak, moving you from not ready to interview ready.",
+  },
+];
+
 export default function Home() {
   return (
-    <main className="relative min-h-screen w-full overflow-hidden bg-pitch-black text-platinum">
-      <nav className="relative z-20 flex items-center justify-between px-24 py-24 sm:px-48 lg:px-80">
+    <main className="relative w-full overflow-x-hidden bg-pitch-black text-platinum">
+      {/* Background layer: the glow stays with the hero, the particle canvas
+          is fixed so the dissolved field sits behind the whole page. */}
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 z-0 h-screen blur-3xl"
+        style={{
+          background:
+            "radial-gradient(circle at 72% 50%, rgba(204,51,99,0.25), transparent 60%)",
+        }}
+        aria-hidden="true"
+      />
+      <ParticleSphere
+        className="pointer-events-none fixed inset-0 z-0 h-full w-full"
+        scrollTarget="#hero"
+        anchor="right"
+        targetDiameterPx={520}
+      />
+
+      {/* pointer-events-none across the hero so drag, cursor repulsion and
+          click-scatter reach the canvas behind it; interactive children opt
+          back in. Below the hero the canvas turns pointer-transparent itself. */}
+      <section
+        id="hero"
+        className="pointer-events-none relative z-10 min-h-screen"
+      >
+        <nav className="pointer-events-auto relative z-20 flex items-center justify-between px-24 py-24 sm:px-48 lg:px-80">
         <span className="font-arial text-[14px] uppercase tracking-[0.12em] text-platinum">
           Aria
         </span>
@@ -37,7 +79,7 @@ export default function Home() {
       </nav>
 
       <div className="relative z-10 mx-auto grid max-w-[1440px] grid-cols-1 items-center gap-48 px-24 pb-80 pt-40 sm:px-48 lg:grid-cols-2 lg:gap-64 lg:px-80 lg:pt-64">
-        <div className="flex flex-col gap-32">
+        <div className="pointer-events-auto flex flex-col gap-32">
           <span className="font-arial text-[14px] uppercase tracking-[0.12em] text-berry-lipstick">
             AI-Powered Interview Prep
           </span>
@@ -71,18 +113,40 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="relative h-[360px] sm:h-[460px] lg:h-[560px]">
-          <div
-            className="pointer-events-none absolute inset-0 blur-3xl"
-            style={{
-              background:
-                "radial-gradient(circle at center, rgba(204,51,99,0.25), transparent 65%)",
-            }}
-            aria-hidden="true"
-          />
-          <ParticleSphere className="absolute inset-0 h-full w-full" />
-        </div>
+        {/* Layout spacer only — the sphere itself is drawn by the
+            full-bleed canvas behind this grid. */}
+        <div
+          className="h-[360px] sm:h-[460px] lg:h-[560px]"
+          aria-hidden="true"
+        />
       </div>
+      </section>
+
+      <section className="relative z-10 mx-auto max-w-[1440px] px-24 py-120 sm:px-48 lg:px-80">
+        <span className="font-arial text-[14px] uppercase tracking-[0.12em] text-berry-lipstick">
+          The loop
+        </span>
+        <h2 className="mt-24 max-w-2xl font-matter text-heading font-medium leading-none text-platinum">
+          Everything you need to become interview ready.
+        </h2>
+
+        <div className="mt-64 grid grid-cols-1 gap-24 md:grid-cols-3">
+          {PILLARS.map((pillar) => (
+            <div
+              key={pillar.index}
+              className="rounded-card border border-graphite bg-pitch-black/60 p-32"
+            >
+              <span className="font-arial text-[14px] uppercase tracking-[0.12em] text-pale-oak/60">
+                {pillar.index}
+              </span>
+              <h3 className="mt-20 font-matter text-subheading font-medium text-platinum">
+                {pillar.title}
+              </h3>
+              <p className="mt-16 text-body text-pale-oak">{pillar.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
     </main>
   );
 }
