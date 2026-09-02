@@ -1,4 +1,5 @@
 import ParticleSphere from "./components/ParticleSphere";
+import SiteNav from "./components/SiteNav";
 import TextCarousel from "./components/TextCarousel";
 
 const PROFESSIONS = [
@@ -55,28 +56,7 @@ export default function Home() {
         id="hero"
         className="pointer-events-none relative z-10 min-h-screen"
       >
-        <nav className="pointer-events-auto relative z-20 flex items-center justify-between px-24 py-24 sm:px-48 lg:px-80">
-        <span className="font-arial text-[14px] uppercase tracking-[0.12em] text-platinum">
-          Aria
-        </span>
-        <div className="hidden items-center gap-32 font-arial text-[14px] text-pale-oak md:flex">
-          <a href="#" className="transition-colors hover:text-platinum">
-            Product
-          </a>
-          <a href="#" className="transition-colors hover:text-platinum">
-            How it works
-          </a>
-          <a href="#" className="transition-colors hover:text-platinum">
-            Log in
-          </a>
-        </div>
-        <a
-          href="#"
-          className="rounded-button bg-berry-lipstick px-20 py-12 font-arial text-[14px] text-platinum transition-colors hover:bg-[#b32a56]"
-        >
-          Get Started
-        </a>
-      </nav>
+        <SiteNav />
 
       <div className="relative z-10 mx-auto grid max-w-[1440px] grid-cols-1 items-center gap-48 px-24 pb-80 pt-40 sm:px-48 lg:grid-cols-2 lg:gap-64 lg:px-80 lg:pt-64">
         <div className="pointer-events-auto flex flex-col gap-32">
