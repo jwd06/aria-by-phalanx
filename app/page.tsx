@@ -1,4 +1,4 @@
-import ParticleSphere from "./components/ParticleSphere";
+import SphereStage from "./components/SphereStage";
 import SiteNav from "./components/SiteNav";
 import TextCarousel from "./components/TextCarousel";
 
@@ -42,12 +42,7 @@ export default function Home() {
         }}
         aria-hidden="true"
       />
-      <ParticleSphere
-        className="pointer-events-none fixed inset-0 z-0 h-full w-full"
-        scrollTarget="#hero"
-        anchor="right"
-        targetDiameterPx={520}
-      />
+      <SphereStage className="pointer-events-none fixed inset-0 z-0 h-full w-full" />
 
       {/* pointer-events-none across the hero so drag, cursor repulsion and
           click-scatter reach the canvas behind it; interactive children opt

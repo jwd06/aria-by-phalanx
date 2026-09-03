@@ -33,6 +33,16 @@ export interface ParticleSphereProps {
   /** Force of the one-shot scatter burst on pointer/click/touch contact. */
   scatterForce?: number;
   /**
+   * How far the whole sphere breaks apart while the cursor is inside it, in
+   * sphere radii. It holds there until the pointer leaves. 0 disables it.
+   */
+  hoverScatterStrength?: number;
+  /**
+   * Seconds for a full break-apart plus reassemble. Split asymmetrically by
+   * {@link BURST_ATTACK}: it scatters fast and settles back slowly.
+   */
+  hoverScatterDuration?: number;
+  /**
    * CSS selector for the element whose scroll progress dissolves the sphere
    * into an ambient particle field. Omit to disable all scroll behaviour.
    */
@@ -65,6 +75,8 @@ const DEFAULTS = {
   repulsionRadius: 0.16,
   repulsionStrength: 0.2,
   scatterForce: 0.45,
+  hoverScatterStrength: 0.3,
+  hoverScatterDuration: 1.1,
   dissolveSpread: 2.6,
   dissolveOpacity: 0.34,
   anchor: "center" as const,
@@ -176,6 +188,13 @@ const DISSOLVE_RESPONSE = 11;
 /** Fraction of the idle spin the field keeps once fully dispersed. */
 const DISSOLVED_SPIN = 0.45;
 
+/**
+ * Share of `hoverScatterDuration` spent breaking apart; the rest is the settle
+ * back once the cursor leaves. Well under half, so it scatters much faster
+ * than it reassembles.
+ */
+const BURST_ATTACK = 0.18;
+
 export default function ParticleSphere(props: ParticleSphereProps) {
   const opts = { ...DEFAULTS, ...props };
   const containerRef = useRef<HTMLDivElement>(null);
@@ -223,8 +242,24 @@ export default function ParticleSphere(props: ParticleSphereProps) {
       count,
       optsRef.current.dissolveSpread
     );
+
+    /**
+     * Per-particle share of the hover burst. Pushing every particle out by the
+     * same amount reads as a balloon inflating, so each gets its own distance
+     * and the surface breaks into a loose cloud that still holds its silhouette.
+     */
+    const burstAmplitude = new Float32Array(count);
+    {
+      const rand = mulberry32(0x0b1257);
+      for (let i = 0; i < count; i++) burstAmplitude[i] = 0.35 + rand() * 0.95;
+    }
+
     const drawColors = new Float32Array(count * 3);
     const baseColor = new THREE.Color(optsRef.current.color);
+    /** Last colour written into the vertex buffer, so live edits can repaint. */
+    let appliedColor = optsRef.current.color;
+    /** Last layout-affecting options, so live edits can refit the sphere. */
+    let appliedLayout = `${optsRef.current.targetDiameterPx ?? 0}|${optsRef.current.anchor}`;
     for (let i = 0; i < count; i++) {
       drawColors[i * 3] = baseColor.r;
       drawColors[i * 3 + 1] = baseColor.g;
@@ -286,6 +321,13 @@ export default function ParticleSphere(props: ParticleSphereProps) {
 
     /** True while any particle is still recovering from cursor displacement. */
     let displacementActive = false;
+
+    /** Raw 0-1 ramp: climbs while the cursor is on the sphere, falls off it. */
+    let burstProgress = 0;
+    /** Eased ramp the particles actually ride; kept so changes can be detected. */
+    let burstEnv = 0;
+    /** Whether the cursor is inside the sphere's hit volume this frame. */
+    let overSphere = false;
 
     const raycaster = new THREE.Raycaster();
     const invQuat = new THREE.Quaternion();
@@ -526,6 +568,19 @@ export default function ParticleSphere(props: ParticleSphereProps) {
           (1 - (1 - DISSOLVED_SPIN) * dissolve);
       }
 
+      // Live-tunable options that were otherwise baked in at init.
+      let colorDirty = false;
+      if (o.color !== appliedColor) {
+        appliedColor = o.color;
+        baseColor.set(o.color);
+        colorDirty = true;
+      }
+      const layoutKey = `${o.targetDiameterPx ?? 0}|${o.anchor}`;
+      if (layoutKey !== appliedLayout) {
+        appliedLayout = layoutKey;
+        handleResize();
+      }
+
       let contactActive = false;
       if (pointer.active && interactive) {
         const dir = computeContactDir(pointer.ndc);
@@ -534,6 +589,22 @@ export default function ParticleSphere(props: ParticleSphereProps) {
           contactActive = true;
         }
       }
+
+      // The sphere holds its scattered state for as long as the cursor is
+      // inside its hit sphere, and only reassembles once the pointer leaves.
+      overSphere = contactActive && !reduceMotion && o.hoverScatterStrength > 0;
+
+      const prevBurstEnv = burstEnv;
+      // Break apart quickly, settle back slowly — the same asymmetry the
+      // one-shot envelope had, but driven by hover state instead of elapsed
+      // time so it can be held open indefinitely.
+      const attack = Math.max(0.05, o.hoverScatterDuration * BURST_ATTACK);
+      const release = Math.max(0.1, o.hoverScatterDuration * (1 - BURST_ATTACK));
+      burstProgress = clamp01(
+        burstProgress + (overSphere ? delta / attack : -delta / release)
+      );
+      burstEnv = smoothstep(burstProgress);
+      const burstScale = burstEnv * o.hoverScatterStrength;
 
       invQuat.copy(group.quaternion).invert();
       camLocalDir
@@ -549,7 +620,11 @@ export default function ParticleSphere(props: ParticleSphereProps) {
       // once both are settled the buffer can be left alone and only the group
       // transform animates. This keeps the page-wide field close to free.
       const needsParticleUpdate =
-        dissolve !== prevDissolve || contactActive || displacementActive;
+        dissolve !== prevDissolve ||
+        burstEnv !== prevBurstEnv ||
+        contactActive ||
+        displacementActive ||
+        colorDirty;
       let stillDisplaced = false;
 
       if (needsParticleUpdate) {
@@ -573,7 +648,9 @@ export default function ParticleSphere(props: ParticleSphereProps) {
           if (displacement[i] < 0.0005) displacement[i] = 0;
           else stillDisplaced = true;
 
-          const r = 1 + displacement[i];
+          // Both effects ride the particle's own radius, so it always returns
+          // to its exact place on the Fibonacci surface.
+          const r = 1 + displacement[i] + burstScale * burstAmplitude[i];
 
           if (dissolve > 0) {
             // Staggered break-up: each particle starts leaving at its own delay.
@@ -634,6 +711,9 @@ export default function ParticleSphere(props: ParticleSphereProps) {
       material.dispose();
       material.map?.dispose();
       renderer.dispose();
+      // Remounts (e.g. a particle-count change) would otherwise leak contexts
+      // until the browser evicts the oldest one and blanks an earlier canvas.
+      renderer.forceContextLoss();
       container!.removeChild(renderer.domElement);
     };
   }, []);
