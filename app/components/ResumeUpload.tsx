@@ -7,6 +7,10 @@ import {
   MAX_RESUME_LABEL,
   resolveResumeKind,
 } from "@/lib/resume/fileTypes";
+import { isAtsReport } from "@/lib/ats/parseReport";
+import type { ATSReport } from "@/lib/ats/types";
+import AtsReportCard from "./ats/AtsReportCard";
+import ExperienceQuestion from "./ats/ExperienceQuestion";
 
 type Status = "idle" | "extracting" | "done" | "error";
 
@@ -14,6 +18,11 @@ interface Extracted {
   text: string;
   filename: string;
   characters: number;
+  /**
+   * Optional because the route computes it in a try/catch: a bug in the
+   * scoring rules must never break an upload that extracted fine.
+   */
+  report?: ATSReport;
 }
 
 // Above the route's own 30s `maxDuration`, so the server's limit normally wins and
@@ -42,13 +51,16 @@ function errorFrom(data: unknown): string | null {
 function extractedFrom(data: unknown): Extracted | null {
   if (typeof data !== "object" || data === null) return null;
 
-  const { text, filename, characters } = data as Record<string, unknown>;
+  const { text, filename, characters, report } = data as Record<string, unknown>;
 
   if (typeof text !== "string") return null;
   if (typeof filename !== "string") return null;
   if (typeof characters !== "number") return null;
 
-  return { text, filename, characters };
+  // A malformed or unrecognised report degrades to the text-only view rather
+  // than failing the upload - the extracted text is useful on its own, and it
+  // is what this page originally promised.
+  return { text, filename, characters, report: isAtsReport(report) ?? undefined };
 }
 
 export default function ResumeUpload() {
@@ -60,8 +72,13 @@ export default function ResumeUpload() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Extracted | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [hasExperience, setHasExperience] = useState<boolean | null>(null);
 
   const extracting = status === "extracting";
+  // Uploading is gated on the question because the answer changes the scoring,
+  // and re-scoring after the fact would mean either a second round trip or a
+  // score that silently changed under the user.
+  const ready = hasExperience !== null;
 
   function reset() {
     setStatus("idle");
@@ -79,6 +96,11 @@ export default function ResumeUpload() {
     // Two overlapping uploads would race, and the loser could paint its text
     // under the winner's filename.
     if (inFlightRef.current) return;
+
+    if (hasExperience === null) {
+      fail("Answer the work experience question first so we can score this correctly.");
+      return;
+    }
 
     setError(null);
     setResult(null);
@@ -100,6 +122,7 @@ export default function ResumeUpload() {
     try {
       const body = new FormData();
       body.append("resume", file);
+      body.append("hasExperience", hasExperience ? "yes" : "no");
 
       const response = await fetch("/api/resume/extract", {
         method: "POST",
@@ -139,77 +162,91 @@ export default function ResumeUpload() {
     }
   }
 
+  const inert = extracting || !ready;
+
   return (
     <div className="flex flex-col gap-24">
-      <div
-        onDragOver={(event) => {
-          event.preventDefault();
-          setDragging(true);
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(event) => {
-          event.preventDefault();
-          setDragging(false);
-          const file = event.dataTransfer.files?.[0];
-          if (file) handleFile(file);
-        }}
-        className={`rounded-card border border-dashed p-48 text-center transition-colors ${
-          dragging
-            ? "border-berry-lipstick bg-berry-lipstick/5"
-            : "border-graphite bg-pitch-black/60"
-        }`}
-      >
-        {/* A <label> can't be disabled, but pointing it at a disabled input makes
-            it inert — the styling below just makes that visible. */}
-        <input
-          ref={inputRef}
-          type="file"
-          accept={ACCEPT}
-          disabled={extracting}
-          className="sr-only"
-          id="resume-file"
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file) handleFile(file);
-          }}
-        />
+      {status === "done" && result ? null : (
+        <>
+          <div className="rounded-card border border-graphite bg-pitch-black/60 p-32">
+            <ExperienceQuestion
+              value={hasExperience}
+              onChange={setHasExperience}
+              disabled={extracting}
+            />
+          </div>
 
-        <p className="font-matter text-subheading font-medium text-platinum">
-          Drop your resume here
-        </p>
-        <p className="mt-12 font-arial text-[14px] text-pale-oak">
-          PDF or DOCX, up to {MAX_RESUME_LABEL}
-        </p>
+          <div
+            onDragOver={(event) => {
+              event.preventDefault();
+              if (!inert) setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={(event) => {
+              event.preventDefault();
+              setDragging(false);
+              if (inert) return;
+              const file = event.dataTransfer.files?.[0];
+              if (file) handleFile(file);
+            }}
+            className={`rounded-card border border-dashed p-48 text-center transition-colors ${
+              dragging
+                ? "border-berry-lipstick bg-berry-lipstick/5"
+                : "border-graphite bg-pitch-black/60"
+            } ${ready ? "" : "opacity-60"}`}
+          >
+            {/* A <label> can't be disabled, but pointing it at a disabled input makes
+                it inert — the styling below just makes that visible. */}
+            <input
+              ref={inputRef}
+              type="file"
+              accept={ACCEPT}
+              disabled={inert}
+              className="sr-only"
+              id="resume-file"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) handleFile(file);
+              }}
+            />
 
-        <label
-          htmlFor="resume-file"
-          aria-disabled={extracting}
-          className={`mt-32 inline-block rounded-button bg-berry-lipstick px-32 py-16 font-arial text-[14px] text-platinum transition-colors ${
-            extracting
-              ? "pointer-events-none cursor-not-allowed opacity-60"
-              : "cursor-pointer hover:bg-[#b32a56]"
-          }`}
-        >
-          {extracting ? "Reading…" : "Choose a file"}
-        </label>
-      </div>
+            <p className="font-matter text-subheading font-medium text-platinum">
+              Drop your resume here
+            </p>
+            <p className="mt-12 font-arial text-[14px] text-pale-oak">
+              {ready
+                ? `PDF or DOCX, up to ${MAX_RESUME_LABEL}`
+                : "Answer the question above first"}
+            </p>
+
+            <label
+              htmlFor="resume-file"
+              aria-disabled={inert}
+              className={`mt-32 inline-block rounded-button bg-berry-lipstick px-32 py-16 font-arial text-[14px] text-platinum transition-colors ${
+                inert
+                  ? "pointer-events-none cursor-not-allowed opacity-60"
+                  : "cursor-pointer hover:bg-[#b32a56]"
+              }`}
+            >
+              {extracting ? "Reading…" : "Choose a file"}
+            </label>
+          </div>
+        </>
+      )}
 
       {status === "error" && error ? (
         <p className="font-arial text-[14px] text-berry-lipstick">{error}</p>
       ) : null}
 
       {status === "done" && result ? (
-        <div className="rounded-card border border-graphite bg-pitch-black/60 p-32">
+        <>
           <div className="flex flex-wrap items-baseline justify-between gap-16">
             <div>
               <span className="font-arial text-[14px] uppercase tracking-[0.12em] text-pale-oak/60">
-                Extracted text
+                Checked
               </span>
               <p className="mt-12 font-matter text-subheading font-medium text-platinum">
                 {result.filename}
-              </p>
-              <p className="mt-12 font-arial text-[14px] text-pale-oak">
-                {result.characters.toLocaleString()} characters
               </p>
             </div>
             <button
@@ -217,14 +254,28 @@ export default function ResumeUpload() {
               onClick={reset}
               className="rounded-button border border-pale-oak/30 px-20 py-12 font-arial text-[14px] text-platinum transition-colors hover:border-pale-oak/60"
             >
-              Choose a different file
+              Check a different file
             </button>
           </div>
 
-          <pre className="mt-24 max-h-[420px] overflow-y-auto whitespace-pre-wrap border-t border-graphite pt-24 font-arial text-[14px] leading-[1.43] text-pale-oak">
-            {result.text}
-          </pre>
-        </div>
+          {result.report ? <AtsReportCard report={result.report} /> : null}
+
+          {/* The raw text is still the proof behind every finding above, so it
+              stays - but the report is what the user came for, so this sits
+              below it rather than burying it. */}
+          <details className="rounded-card border border-graphite bg-pitch-black/60 p-32">
+            <summary className="cursor-pointer font-arial text-[14px] text-platinum">
+              What the parser actually read
+              <span className="ml-12 text-pale-oak/60">
+                {result.characters.toLocaleString()} characters
+              </span>
+            </summary>
+
+            <pre className="mt-24 max-h-[420px] overflow-y-auto whitespace-pre-wrap border-t border-graphite pt-24 font-arial text-[14px] leading-[1.43] text-pale-oak">
+              {result.text}
+            </pre>
+          </details>
+        </>
       ) : null}
     </div>
   );

@@ -13,9 +13,11 @@ export default function AtsCheckerPage() {
           See what an ATS reads.
         </h1>
         <p className="mt-24 max-w-xl text-body text-pale-oak">
-          Drop in your PDF or DOCX and Aria pulls out the raw text an applicant
-          tracking system would see. If something is missing here, it is missing
-          for the parser too. Nothing is stored — the text stays in your browser.
+          Drop in your PDF or DOCX. Aria pulls out the raw text an applicant
+          tracking system would see, then scores it out of 100 across parsing,
+          contact details, sections, structure and formatting — with the exact
+          reason behind every point. If something is missing here, it is missing
+          for the parser too. Nothing is stored — it all stays in your browser.
         </p>
 
         <div className="mt-64">

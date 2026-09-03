@@ -1,3 +1,5 @@
+import { runAtsReport } from "@/lib/ats/engine";
+import type { ATSReport } from "@/lib/ats/types";
 import { extractDocx } from "@/lib/resume/extractDocx";
 import { extractPdf } from "@/lib/resume/extractPdf";
 import { ResumeParseError } from "@/lib/resume/errors";
@@ -103,10 +105,26 @@ export async function POST(request: Request) {
       );
     }
 
+    // Absent means true, which runs the stricter rule set (an Experience
+    // section is expected and worth points). A stale client or a direct `curl`
+    // therefore gets the conservative score rather than a quietly inflated one.
+    const hasExperience = formData.get("hasExperience") !== "no";
+
+    let report: ATSReport | undefined;
+
+    try {
+      report = runAtsReport({ text, hasExperience, sourceKind: kind });
+    } catch (error) {
+      // Extraction already succeeded and is useful on its own. A bug in the
+      // scoring rules must never turn a working upload into a failed request.
+      console.error(error);
+    }
+
     return Response.json({
       text,
       filename: file.name,
       characters: text.length,
+      report,
     });
   } catch (error) {
     console.error(error);
