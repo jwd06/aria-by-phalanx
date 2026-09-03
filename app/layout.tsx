@@ -9,7 +9,7 @@ const matter = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Aria — Built to get you hired",
+  title: "Aria",
   description:
     "Aria turns your resume and a target role into a closed loop: a tailored resume, resume-grounded interview practice, and a single readiness signal.",
 };
