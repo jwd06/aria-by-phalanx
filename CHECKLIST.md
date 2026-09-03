@@ -25,6 +25,8 @@
 
 - [ ] Run `npx tsc --noEmit`.
 
+- [ ] Run `npm test`.
+
 - [ ] Check edge cases.
   - [ ] `null` and `undefined`
   - [ ] Empty inputs
