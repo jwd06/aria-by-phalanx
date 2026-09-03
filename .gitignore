@@ -44,3 +44,60 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# resumes and other sample documents used to exercise the uploader locally.
+# Never commit a real CV - it is someone's name, address, phone and email, and
+# a public repo is forever.
+*.pdf
+*.docx
+*.doc
+*.rtf
+*.odt
+/samples/
+
+# test suite - runs locally, not published. `npm test` still works for whoever
+# has these files; a fresh clone simply has nothing to run.
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+**/__fixtures__/
+**/__tests__/
+**/__mocks__/
+vitest.config.mts
+vitest.config.ts
+
+# dev-only ATS debug route. Ignored because it imports lib/ats/__fixtures__,
+# which is not published - publishing the route without them would break the
+# build on a fresh clone. It is a local iteration tool, not a product surface.
+/app/api/ats/debug/
+
+# credentials and keys. `.env*` and `*.pem` are covered above; these are the
+# rest of the shapes that must never reach a public remote.
+*.key
+*.p12
+*.pfx
+*.pkcs12
+*.crt
+id_rsa*
+*.mobileprovision
+secrets.json
+credentials.json
+service-account*.json
+
+# editor and OS local state
+.idea/
+.vscode/
+*.swp
+*.swo
+Thumbs.db
+
+# agent / local tooling state
+.claude/
+.cursor/
+.aider*
+
+# local scratch
+/tmp/
+/scratch/
+*.local
