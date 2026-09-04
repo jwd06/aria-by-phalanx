@@ -53,8 +53,11 @@ export default function Home() {
       >
         <SiteNav />
 
-      <div className="relative z-10 mx-auto grid max-w-[1440px] grid-cols-1 items-center gap-48 px-24 pb-80 pt-40 sm:px-48 lg:grid-cols-2 lg:gap-64 lg:px-80 lg:pt-64">
-        <div className="pointer-events-auto flex flex-col gap-32">
+      <div className="relative z-10 mx-auto grid max-w-[1440px] grid-cols-1 items-center gap-32 px-24 pb-80 pt-40 sm:gap-48 sm:px-48 lg:grid-cols-2 lg:gap-64 lg:px-80 lg:pt-64">
+        {/* min-w-0: the carousel pins a px width on a nowrap span, which
+            would otherwise become this column's min-content and drag the
+            whole copy column past the viewport. */}
+        <div className="pointer-events-auto flex min-w-0 flex-col gap-32">
           <span className="font-arial text-[14px] uppercase tracking-[0.12em] text-berry-lipstick">
             AI-Powered Interview Prep
           </span>
@@ -91,13 +94,13 @@ export default function Home() {
         {/* Layout spacer only — the sphere itself is drawn by the
             full-bleed canvas behind this grid. */}
         <div
-          className="h-[360px] sm:h-[460px] lg:h-[560px]"
+          className="h-[280px] sm:h-[460px] lg:h-[560px]"
           aria-hidden="true"
         />
       </div>
       </section>
 
-      <section className="relative z-10 mx-auto max-w-[1440px] px-24 py-120 sm:px-48 lg:px-80">
+      <section className="relative z-10 mx-auto max-w-[1440px] px-24 py-80 sm:px-48 sm:py-120 lg:px-80">
         <span className="font-arial text-[14px] uppercase tracking-[0.12em] text-berry-lipstick">
           The loop
         </span>
@@ -105,11 +108,11 @@ export default function Home() {
           Everything you need to become interview ready.
         </h2>
 
-        <div className="mt-64 grid grid-cols-1 gap-24 md:grid-cols-3">
+        <div className="mt-64 grid grid-cols-1 gap-24 sm:grid-cols-2 md:grid-cols-3">
           {PILLARS.map((pillar) => (
             <div
               key={pillar.index}
-              className="rounded-card border border-graphite bg-pitch-black/60 p-32"
+              className="rounded-card border border-graphite bg-pitch-black/60 p-24 sm:p-32"
             >
               <span className="font-arial text-[14px] uppercase tracking-[0.12em] text-pale-oak/60">
                 {pillar.index}

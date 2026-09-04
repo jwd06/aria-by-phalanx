@@ -5,7 +5,7 @@ export default function AtsCheckerPage() {
   return (
     <>
       <SiteNav />
-      <main className="mx-auto w-full max-w-[880px] px-24 py-80 sm:px-48">
+      <main className="mx-auto w-full max-w-[880px] px-24 py-48 sm:px-48 sm:py-80">
         <span className="font-arial text-[14px] uppercase tracking-[0.12em] text-berry-lipstick">
           ATS checker
         </span>

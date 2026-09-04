@@ -70,6 +70,10 @@ export default function TextCarousel({
       className={`relative inline-flex overflow-hidden align-bottom ${className ?? ""}`}
       style={{
         width: width ?? "auto",
+        // The measured width is the widest word on a nowrap span, so without a
+        // cap it can push the line - and any grid column it sits in - past the
+        // viewport on a phone.
+        maxWidth: "100%",
         height: "1.15em",
       }}
     >

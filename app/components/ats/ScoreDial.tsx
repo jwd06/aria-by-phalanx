@@ -19,11 +19,12 @@ export default function ScoreDial({ report }: { report: ATSReport }) {
   const filled = Math.max(0, Math.min(100, report.score)) / 100;
 
   return (
-    <div className="flex items-center gap-24">
+    <div className="flex flex-col items-start gap-16 sm:flex-row sm:items-center sm:gap-24">
       <div className="relative shrink-0">
         <svg
-          width={SIZE}
-          height={SIZE}
+          // Sized in CSS so the dial shrinks on a phone; the geometry below
+          // stays in viewBox units.
+          className="h-[112px] w-[112px] sm:h-[148px] sm:w-[148px]"
           viewBox={`0 0 ${SIZE} ${SIZE}`}
           role="img"
           aria-label={`ATS readiness score ${report.score} out of 100. ${BAND_LABELS[report.band]}.`}

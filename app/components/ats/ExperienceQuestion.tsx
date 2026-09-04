@@ -38,7 +38,7 @@ export default function ExperienceQuestion({
           return (
             <label
               key={option.label}
-              className={`flex-1 cursor-pointer rounded-button border px-24 py-16 transition-colors ${
+              className={`basis-full cursor-pointer rounded-button border px-24 py-16 transition-colors sm:flex-1 sm:basis-0 ${
                 selected
                   ? "border-berry-lipstick bg-berry-lipstick/10"
                   : "border-graphite hover:border-pale-oak/60"

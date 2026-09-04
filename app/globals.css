@@ -33,28 +33,31 @@
   --radius-small: 6px;
   --radius-button: 6px;
 
-  /* Type scale */
+  /* Type scale. The three large sizes are fluid so the hero headline and
+     section headings fit a phone; tracking is in em so it scales with them.
+     `@theme inline` means utilities read these vars, so the clamps reach
+     every call site without a responsive class. */
   --text-caption: 10px;
   --text-caption--line-height: 1.4;
-  --text-caption--letter-spacing: 1.5px;
+  --text-caption--letter-spacing: 0.15em;
 
   --text-body: 16px;
   --text-body--line-height: 1.4;
 
   --text-subheading: 24px;
   --text-subheading--line-height: 1.3;
-  --text-subheading--letter-spacing: -0.48px;
+  --text-subheading--letter-spacing: -0.02em;
 
-  --text-heading: 36px;
+  --text-heading: clamp(28px, 6.5vw, 36px);
   --text-heading--line-height: 1;
 
-  --text-heading-lg: 61px;
+  --text-heading-lg: clamp(28px, 8.5vw, 61px);
   --text-heading-lg--line-height: 1;
-  --text-heading-lg--letter-spacing: -2.44px;
+  --text-heading-lg--letter-spacing: -0.04em;
 
-  --text-display: 96px;
+  --text-display: clamp(61px, 7vw, 96px);
   --text-display--line-height: 1;
-  --text-display--letter-spacing: -3.84px;
+  --text-display--letter-spacing: -0.04em;
 }
 
 @theme inline {

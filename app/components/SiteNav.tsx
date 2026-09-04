@@ -1,4 +1,13 @@
 import Link from "next/link";
+import MobileNav, { type NavLink } from "./MobileNav";
+
+/** Shared by the desktop cluster and the mobile drawer so they can't drift. */
+const NAV_LINKS: readonly NavLink[] = [
+  { label: "Product", href: "#" },
+  { label: "How it works", href: "#" },
+  { label: "ATS checker", href: "/ats-checker" },
+  { label: "Log in", href: "#" },
+];
 
 // Lives inside the landing hero, which is `pointer-events-none` so drag and
 // cursor repulsion reach the particle canvas behind it — hence the explicit
@@ -13,28 +22,34 @@ export default function SiteNav() {
         Aria
       </Link>
       <div className="hidden items-center gap-32 font-arial text-[14px] text-pale-oak md:flex">
-        <a href="#" className="transition-colors hover:text-platinum">
-          Product
-        </a>
-        <a href="#" className="transition-colors hover:text-platinum">
-          How it works
-        </a>
-        <Link
-          href="/ats-checker"
-          className="transition-colors hover:text-platinum"
-        >
-          ATS checker
-        </Link>
-        <a href="#" className="transition-colors hover:text-platinum">
-          Log in
-        </a>
+        {NAV_LINKS.map((link) =>
+          link.href.startsWith("/") ? (
+            <Link
+              key={link.label}
+              href={link.href}
+              className="transition-colors hover:text-platinum"
+            >
+              {link.label}
+            </Link>
+          ) : (
+            <a
+              key={link.label}
+              href={link.href}
+              className="transition-colors hover:text-platinum"
+            >
+              {link.label}
+            </a>
+          )
+        )}
       </div>
+      {/* Below `md` the CTA moves into the drawer, so the bar stays two items. */}
       <a
         href="#"
-        className="rounded-button bg-berry-lipstick px-20 py-12 font-arial text-[14px] text-platinum transition-colors hover:bg-[#b32a56]"
+        className="hidden rounded-button bg-berry-lipstick px-20 py-12 font-arial text-[14px] text-platinum transition-colors hover:bg-[#b32a56] md:inline-block"
       >
         Get Started
       </a>
+      <MobileNav links={NAV_LINKS} />
     </nav>
   );
 }

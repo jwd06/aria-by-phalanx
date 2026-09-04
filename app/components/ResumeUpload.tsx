@@ -168,7 +168,7 @@ export default function ResumeUpload() {
     <div className="flex flex-col gap-24">
       {status === "done" && result ? null : (
         <>
-          <div className="rounded-card border border-graphite bg-pitch-black/60 p-32">
+          <div className="rounded-card border border-graphite bg-pitch-black/60 p-20 sm:p-32">
             <ExperienceQuestion
               value={hasExperience}
               onChange={setHasExperience}
@@ -189,7 +189,7 @@ export default function ResumeUpload() {
               const file = event.dataTransfer.files?.[0];
               if (file) handleFile(file);
             }}
-            className={`rounded-card border border-dashed p-48 text-center transition-colors ${
+            className={`rounded-card border border-dashed p-24 text-center transition-colors sm:p-48 ${
               dragging
                 ? "border-berry-lipstick bg-berry-lipstick/5"
                 : "border-graphite bg-pitch-black/60"
@@ -263,7 +263,7 @@ export default function ResumeUpload() {
           {/* The raw text is still the proof behind every finding above, so it
               stays - but the report is what the user came for, so this sits
               below it rather than burying it. */}
-          <details className="rounded-card border border-graphite bg-pitch-black/60 p-32">
+          <details className="rounded-card border border-graphite bg-pitch-black/60 p-20 sm:p-32">
             <summary className="cursor-pointer font-arial text-[14px] text-platinum">
               What the parser actually read
               <span className="ml-12 text-pale-oak/60">
@@ -271,7 +271,7 @@ export default function ResumeUpload() {
               </span>
             </summary>
 
-            <pre className="mt-24 max-h-[420px] overflow-y-auto whitespace-pre-wrap border-t border-graphite pt-24 font-arial text-[14px] leading-[1.43] text-pale-oak">
+            <pre className="mt-24 max-h-[280px] overflow-y-auto whitespace-pre-wrap break-words border-t border-graphite pt-24 font-arial text-[14px] leading-[1.43] text-pale-oak sm:max-h-[420px]">
               {result.text}
             </pre>
           </details>

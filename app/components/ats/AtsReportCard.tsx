@@ -26,7 +26,7 @@ export default function AtsReportCard({ report }: { report: ATSReport }) {
         <LowConfidenceBanner message={report.confidenceMessage} />
       ) : null}
 
-      <div className="rounded-card border border-graphite bg-pitch-black/60 p-32">
+      <div className="rounded-card border border-graphite bg-pitch-black/60 p-20 sm:p-32">
         <span className="font-arial text-[14px] uppercase tracking-[0.12em] text-pale-oak/60">
           ATS readiness
         </span>
@@ -83,7 +83,7 @@ export default function AtsReportCard({ report }: { report: ATSReport }) {
         return (
           <div
             key={category.id}
-            className="rounded-card border border-graphite bg-pitch-black/60 p-32"
+            className="rounded-card border border-graphite bg-pitch-black/60 p-20 sm:p-32"
           >
             {collapsed ? (
               <details>

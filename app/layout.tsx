@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { DM_Sans } from "next/font/google";
 import "./globals.css";
 
@@ -12,6 +12,10 @@ export const metadata: Metadata = {
   title: "Aria",
   description:
     "Aria turns your resume and a target role into a closed loop: a tailored resume, resume-grounded interview practice, and a single readiness signal.",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#14110f",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

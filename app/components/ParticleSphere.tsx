@@ -208,8 +208,19 @@ export default function ParticleSphere(props: ParticleSphereProps) {
     const container = containerRef.current;
     if (!container) return;
 
+    // Phones pay for every additive-blended point twice over: fill rate and
+    // battery. Read once - the effect rebuilds the whole scene, so this must
+    // not be reactive.
+    const lowPower =
+      window.matchMedia("(pointer: coarse)").matches ||
+      window.innerWidth < 640;
+
     const count = clamp(
-      Math.round(optsRef.current.particleCount),
+      Math.round(
+        lowPower
+          ? Math.min(optsRef.current.particleCount, 2500)
+          : optsRef.current.particleCount
+      ),
       1000,
       12000
     );
@@ -224,11 +235,17 @@ export default function ParticleSphere(props: ParticleSphereProps) {
       antialias: true,
       alpha: true,
     });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, lowPower ? 1.5 : 2));
     container.appendChild(renderer.domElement);
     renderer.domElement.style.width = "100%";
     renderer.domElement.style.height = "100%";
-    renderer.domElement.style.touchAction = "none";
+    // `pan-y pinch-zoom`, not `none`: the canvas is fixed and full-viewport, so
+    // `none` swallows every vertical swipe over the hero and the page cannot be
+    // scrolled by touch at all. `pinch-zoom` has to be listed explicitly - `pan-y`
+    // alone would leave the whole landing page un-zoomable (WCAG 1.4.4), since the
+    // canvas is the hit target across most of the viewport. `touch-action` governs
+    // touch and pen only - mouse dragging is unaffected.
+    renderer.domElement.style.touchAction = "pan-y pinch-zoom";
     renderer.domElement.style.cursor = "grab";
 
     const group = new THREE.Group();
@@ -378,6 +395,23 @@ export default function ParticleSphere(props: ParticleSphereProps) {
     }
 
     const dragSensitivity = 0.006;
+    /** Touch contact waiting to prove it is a horizontal spin, not a scroll. */
+    let pendingDrag: { id: number; x: number; y: number } | null = null;
+    /** Movement, in px, before a touch commits to spinning. */
+    const dragIntentThreshold = 6;
+
+    function beginDrag(e: PointerEvent) {
+      try {
+        renderer.domElement.setPointerCapture(e.pointerId);
+      } catch {
+        // capture is best-effort; the drag still tracks without it
+      }
+      dragging = true;
+      momentum.x = 0;
+      momentum.y = 0;
+      dragLast = { x: e.clientX, y: e.clientY, t: performance.now() };
+      renderer.domElement.style.cursor = "grabbing";
+    }
 
     function onPointerEnter() {
       hovering = true;
@@ -391,6 +425,17 @@ export default function ParticleSphere(props: ParticleSphereProps) {
       const ndc = toNDC(e.clientX, e.clientY);
       pointer.ndc.copy(ndc);
       pointer.active = true;
+      if (!dragging && pendingDrag && pendingDrag.id === e.pointerId) {
+        const dx = e.clientX - pendingDrag.x;
+        const dy = e.clientY - pendingDrag.y;
+        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > dragIntentThreshold) {
+          pendingDrag = null;
+          beginDrag(e);
+        } else if (Math.abs(dy) > dragIntentThreshold) {
+          // The browser is taking this one as a scroll.
+          pendingDrag = null;
+        }
+      }
       if (dragging) {
         const now = performance.now();
         const dt = Math.max(1, now - dragLast.t);
@@ -408,15 +453,18 @@ export default function ParticleSphere(props: ParticleSphereProps) {
       }
     }
     function onPointerDown(e: PointerEvent) {
-      renderer.domElement.setPointerCapture(e.pointerId);
-      dragging = true;
-      momentum.x = 0;
-      momentum.y = 0;
-      dragLast = { x: e.clientX, y: e.clientY, t: performance.now() };
-      renderer.domElement.style.cursor = "grabbing";
+      if (e.pointerType === "mouse") {
+        beginDrag(e);
+      } else {
+        // Capturing here would keep the gesture even when it turns out to be a
+        // scroll, so a touch has to earn the drag in onPointerMove first. The
+        // scatter burst below still fires, so a tap behaves as it always did.
+        pendingDrag = { id: e.pointerId, x: e.clientX, y: e.clientY };
+      }
       scatterBurstAt(toNDC(e.clientX, e.clientY));
     }
     function onPointerUp(e: PointerEvent) {
+      if (pendingDrag && pendingDrag.id === e.pointerId) pendingDrag = null;
       dragging = false;
       try {
         renderer.domElement.releasePointerCapture(e.pointerId);
@@ -453,8 +501,10 @@ export default function ParticleSphere(props: ParticleSphereProps) {
       const visibleWidth = visibleHeight * camera.aspect;
 
       if (o.targetDiameterPx) {
-        // World radius that projects to targetDiameterPx at the sphere plane.
-        fittedScale = (o.targetDiameterPx / height) * (visibleHeight / 2);
+        // World radius that projects to targetDiameterPx at the sphere plane,
+        // capped so the orb never grows wider than the viewport on a phone.
+        const diameterPx = Math.min(o.targetDiameterPx, width * 0.82);
+        fittedScale = (diameterPx / height) * (visibleHeight / 2);
       } else {
         fittedScale = o.sphereScale;
       }
@@ -549,6 +599,7 @@ export default function ParticleSphere(props: ParticleSphereProps) {
           hovering = false;
           pointer.active = false;
           dragging = false;
+          pendingDrag = null;
         }
       }
 
@@ -722,7 +773,7 @@ export default function ParticleSphere(props: ParticleSphereProps) {
     <div
       ref={containerRef}
       className={props.className}
-      style={{ touchAction: "none" }}
+      style={{ touchAction: "pan-y pinch-zoom" }}
       aria-hidden="true"
     />
   );
