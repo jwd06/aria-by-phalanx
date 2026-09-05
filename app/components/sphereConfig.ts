@@ -46,8 +46,14 @@ export const SPHERE_BASE_CONFIG: SphereConfig = {
   hoverScatterDuration: 1.1,
   dissolveSpread: 2.6,
   dissolveOpacity: 0.34,
+  // The hero is a single overlaid column - copy on top, orb behind it - and the
+  // orb is sized to read as a backdrop the headline sits on rather than a ball
+  // beside it. Phones are unaffected: ParticleSphere caps the diameter at 82%
+  // of the canvas width, which clamps this and the previous 520 to the same
+  // size there. "right" shifts it to about 75% across the viewport, so the
+  // headline crosses its left edge instead of sitting dead centre on it.
   anchor: "right",
-  targetDiameterPx: 520,
+  targetDiameterPx: 720,
   driftStrength: 0.12,
 };
 

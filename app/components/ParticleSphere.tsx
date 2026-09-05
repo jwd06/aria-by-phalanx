@@ -512,12 +512,15 @@ export default function ParticleSphere(props: ParticleSphereProps) {
       worldPerPixel = visibleHeight / height;
       maxDrift = visibleHeight * 0.35;
 
-      // Below the lg breakpoint the page collapses to one column, so the orb
-      // centres itself under the headline instead of sitting in the right half.
+      // A "right" anchor only claims the right half where there is a second
+      // column to claim; below the lg breakpoint the page is one column and the
+      // orb centres itself instead. Vertically it is always centred - the hero
+      // layers its copy over the orb rather than stacking them, so there is no
+      // reserved space below the text to drop into.
       const wide = width >= 1024;
       group.position.x =
         o.anchor === "right" && wide ? visibleWidth * 0.25 : 0;
-      anchorY = wide ? 0 : -visibleHeight * 0.12;
+      anchorY = 0;
       group.position.y = anchorY + drift;
     }
     const resizeObserver = new ResizeObserver(handleResize);

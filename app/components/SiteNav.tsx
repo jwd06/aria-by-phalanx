@@ -11,17 +11,19 @@ const NAV_LINKS: readonly NavLink[] = [
 
 // Lives inside the landing hero, which is `pointer-events-none` so drag and
 // cursor repulsion reach the particle canvas behind it — hence the explicit
-// `pointer-events-auto` here. Harmless on ordinary pages.
+// `pointer-events-auto` below. It sits on the individual controls rather than
+// the bar, which spans the full width and would otherwise block the orb across
+// the empty gaps between links. Harmless on ordinary pages.
 export default function SiteNav() {
   return (
-    <nav className="pointer-events-auto relative z-20 flex items-center justify-between px-24 py-24 sm:px-48 lg:px-80">
+    <nav className="pointer-events-none relative z-20 flex items-center justify-between px-24 py-24 sm:px-48 lg:px-80">
       <Link
         href="/"
-        className="font-arial text-[14px] uppercase tracking-[0.12em] text-platinum"
+        className="pointer-events-auto font-arial text-[14px] uppercase tracking-[0.12em] text-platinum"
       >
         Aria
       </Link>
-      <div className="hidden items-center gap-32 font-arial text-[14px] text-pale-oak md:flex">
+      <div className="pointer-events-auto hidden items-center gap-32 font-arial text-[14px] text-pale-oak md:flex">
         {NAV_LINKS.map((link) =>
           link.href.startsWith("/") ? (
             <Link
@@ -45,7 +47,7 @@ export default function SiteNav() {
       {/* Below `md` the CTA moves into the drawer, so the bar stays two items. */}
       <a
         href="#"
-        className="hidden rounded-button bg-berry-lipstick px-20 py-12 font-arial text-[14px] text-platinum transition-colors hover:bg-[#b32a56] md:inline-block"
+        className="pointer-events-auto hidden rounded-button bg-berry-lipstick px-20 py-12 font-arial text-[14px] text-platinum transition-colors hover:bg-[#b32a56] md:inline-block"
       >
         Get Started
       </a>

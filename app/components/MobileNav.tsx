@@ -188,7 +188,10 @@ export default function MobileNav({ links }: { links: readonly NavLink[] }) {
         // dangling id the rest of the time is worse than omitting the attribute.
         aria-controls={rendered ? "mobile-nav-panel" : undefined}
         aria-label={open ? "Close menu" : "Open menu"}
-        className="-mr-12 flex h-40 w-40 items-center justify-center rounded-small text-platinum md:hidden"
+        // pointer-events-auto: the trigger stays in the nav's subtree, which is
+        // pointer-transparent so the particle canvas behind the hero stays
+        // grabbable. The portalled panel below escapes that and opts itself in.
+        className="pointer-events-auto -mr-12 flex h-40 w-40 items-center justify-center rounded-small text-platinum md:hidden"
       >
         <span aria-hidden="true" className="flex w-20 flex-col gap-[5px]">
           <span className="block h-[1.5px] w-full bg-current" />

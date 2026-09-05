@@ -53,11 +53,21 @@ export default function Home() {
       >
         <SiteNav />
 
-      <div className="relative z-10 mx-auto grid max-w-[1440px] grid-cols-1 items-center gap-32 px-24 pb-80 pt-40 sm:gap-48 sm:px-48 lg:grid-cols-2 lg:gap-64 lg:px-80 lg:pt-64">
-        {/* min-w-0: the carousel pins a px width on a nowrap span, which
-            would otherwise become this column's min-content and drag the
-            whole copy column past the viewport. */}
-        <div className="pointer-events-auto flex min-w-0 flex-col gap-32">
+      <div className="relative z-10 mx-auto grid max-w-[1440px] grid-cols-1 items-center gap-32 px-24 pb-80 pt-40 sm:gap-48 sm:px-48 lg:px-80 lg:pt-64">
+        {/* pointer-events-none, with only the CTAs opting back in below: this
+            column now sits directly on top of the orb, and its box would
+            otherwise swallow every drag, repulsion and scatter event across the
+            whole headline. The cost is that the h1 and paragraph stop being
+            mouse-selectable; the alternative is a dead sphere behind the words.
+
+            min-w-0: the carousel pins a px width on a nowrap span, which would
+            otherwise become this grid item's min-content and drag the whole
+            copy column past the viewport.
+
+            max-w: with the hero down to one column the headline would run the
+            full 1440px container, which is far too long a measure at
+            text-display. */}
+        <div className="pointer-events-none flex min-w-0 max-w-[820px] flex-col gap-32">
           <span className="font-arial text-[14px] uppercase tracking-[0.12em] text-berry-lipstick">
             AI-Powered Interview Prep
           </span>
@@ -75,28 +85,24 @@ export default function Home() {
             from not ready to interview ready.
           </p>
 
+          {/* pointer-events-auto sits on each anchor rather than this wrapper,
+              which stretches the full column width and would put the dead zone
+              straight back over the orb. */}
           <div className="flex flex-col gap-16 sm:flex-row sm:items-center">
             <a
               href="#"
-              className="rounded-button bg-berry-lipstick px-32 py-16 text-center font-arial text-[14px] text-platinum transition-colors hover:bg-[#b32a56]"
+              className="pointer-events-auto rounded-button bg-berry-lipstick px-32 py-16 text-center font-arial text-[14px] text-platinum transition-colors hover:bg-[#b32a56]"
             >
               Build your resume
             </a>
             <a
               href="#"
-              className="rounded-button border border-pale-oak/30 px-32 py-16 text-center font-arial text-[14px] text-platinum transition-colors hover:border-pale-oak/60"
+              className="pointer-events-auto rounded-button border border-pale-oak/30 px-32 py-16 text-center font-arial text-[14px] text-platinum transition-colors hover:border-pale-oak/60"
             >
               See how it works
             </a>
           </div>
         </div>
-
-        {/* Layout spacer only — the sphere itself is drawn by the
-            full-bleed canvas behind this grid. */}
-        <div
-          className="h-[280px] sm:h-[460px] lg:h-[560px]"
-          aria-hidden="true"
-        />
       </div>
       </section>
 
