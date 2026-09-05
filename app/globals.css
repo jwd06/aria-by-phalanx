@@ -116,6 +116,20 @@
   --text-display--letter-spacing: var(--text-display--letter-spacing);
 }
 
+/* The nav's "How it works" link is an in-page anchor, and an unanimated jump
+   from the hero to the pillars reads as a page swap rather than a scroll.
+   Reduced motion opts out: a full-viewport travel is exactly the kind of
+   unrequested movement that setting exists to suppress. */
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

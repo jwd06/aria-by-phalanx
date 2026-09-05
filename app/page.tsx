@@ -106,7 +106,11 @@ export default function Home() {
       </div>
       </section>
 
-      <section className="relative z-10 mx-auto max-w-[1440px] px-24 py-80 sm:px-48 sm:py-120 lg:px-80">
+      {/* Anchor target for the nav's "How it works" link. */}
+      <section
+        id="how-it-works"
+        className="relative z-10 mx-auto max-w-[1440px] px-24 py-80 sm:px-48 sm:py-120 lg:px-80"
+      >
         <span className="font-arial text-[14px] uppercase tracking-[0.12em] text-berry-lipstick">
           The loop
         </span>

@@ -4,7 +4,7 @@ import MobileNav, { type NavLink } from "./MobileNav";
 /** Shared by the desktop cluster and the mobile drawer so they can't drift. */
 const NAV_LINKS: readonly NavLink[] = [
   { label: "Product", href: "#" },
-  { label: "How it works", href: "#" },
+  { label: "How it works", href: "#how-it-works" },
   { label: "ATS checker", href: "/ats-checker" },
   { label: "Log in", href: "#" },
 ];

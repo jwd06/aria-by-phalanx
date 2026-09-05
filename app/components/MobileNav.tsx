@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+} from "react";
 import { createPortal } from "react-dom";
 import gsap from "gsap";
 
@@ -35,6 +41,8 @@ export default function MobileNav({ links }: { links: readonly NavLink[] }) {
   const backdropRef = useRef<HTMLDivElement>(null);
   /** False when the close came from navigating away, so focus isn't yanked. */
   const restoreFocus = useRef(true);
+  /** An in-page anchor waiting for the scroll lock below to lift. */
+  const pendingHash = useRef<string | null>(null);
   const wasOpen = useRef(false);
 
   // Resizing past `md` hides the drawer via CSS; close it so the scroll lock
@@ -112,6 +120,23 @@ export default function MobileNav({ links }: { links: readonly NavLink[] }) {
     };
   }, [rendered]);
 
+  // Deferred in-page scroll. The lock above holds `overflow: hidden` on the
+  // body through the exit animation, so letting the browser handle the fragment
+  // itself would scroll the page underneath a drawer that is still on screen.
+  // Declared after the lock effect so its cleanup - the unlock - runs first.
+  useEffect(() => {
+    if (rendered) return;
+    const hash = pendingHash.current;
+    if (!hash) return;
+    pendingHash.current = null;
+    const target = document.querySelector(hash);
+    if (!target) return;
+    window.history.replaceState(null, "", hash);
+    // No `behavior`, so this follows the `scroll-behavior` in globals.css and
+    // stays instant under `prefers-reduced-motion`.
+    target.scrollIntoView();
+  }, [rendered]);
+
   // --- Escape + focus trap ---
   useEffect(() => {
     if (!open) return;
@@ -173,6 +198,23 @@ export default function MobileNav({ links }: { links: readonly NavLink[] }) {
 
   /** Closing because the user is leaving the page - leave focus to the route. */
   function closeForNavigation() {
+    restoreFocus.current = false;
+    setOpen(false);
+  }
+
+  /**
+   * Same-page anchors: hand the scroll to the effect above instead of the
+   * browser. Focus isn't restored either - the trigger sits at the top of the
+   * page, so focusing it would scroll straight back to where we came from.
+   * A bare "#" is a placeholder link, not an anchor, and keeps the plain close.
+   */
+  function closeForHash(event: ReactMouseEvent<HTMLAnchorElement>, href: string) {
+    if (href.length === 1) {
+      close();
+      return;
+    }
+    event.preventDefault();
+    pendingHash.current = href;
     restoreFocus.current = false;
     setOpen(false);
   }
@@ -250,7 +292,7 @@ export default function MobileNav({ links }: { links: readonly NavLink[] }) {
                         key={link.label}
                         href={link.href}
                         data-nav-item
-                        onClick={close}
+                        onClick={(event) => closeForHash(event, link.href)}
                         className={className}
                       >
                         {link.label}
