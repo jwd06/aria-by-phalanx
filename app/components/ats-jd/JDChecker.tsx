@@ -153,7 +153,7 @@ export default function JDChecker() {
                 <KeywordList title="Missing" keywords={result.missing} empty="All recognized job keywords were found in your resume." />
               </div>
             )}
-            <p className="mt-24 font-arial text-[14px] text-pale-oak">Missing means the keyword or a recognized alias was not found in your resume text. Only include skills you actually have. This check covers a curated set of software skills and counts each once.</p>
+            <p className="mt-24 font-arial text-[14px] text-pale-oak">Missing means the keyword or a recognized alias was not found in your resume text. Only include skills you actually have. This check covers a curated set of software, security, and networking terms and counts each once. Terms outside this list and broader qualifications are not assessed.</p>
           </section>
         ) : null}
       </div>
