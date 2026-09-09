@@ -1,3 +1,5 @@
+import { MAX_JOB_DESCRIPTION_BYTES } from "../ats-jd/constants";
+
 export const PDF_MIME = "application/pdf";
 export const DOCX_MIME =
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
@@ -38,7 +40,7 @@ export function resolveResumeKind(file: {
  * buffered — `MAX_RESUME_BYTES` against the parsed file stays authoritative, since
  * a client controls the header it sends.
  */
-export const MAX_UPLOAD_BYTES = MAX_RESUME_BYTES + 8 * 1024;
+export const MAX_UPLOAD_BYTES = MAX_RESUME_BYTES + MAX_JOB_DESCRIPTION_BYTES + 8 * 1024;
 
 const PDF_MAGIC = [0x25, 0x50, 0x44, 0x46]; // %PDF
 const ZIP_MAGIC = [0x50, 0x4b, 0x03, 0x04]; // PK\x03\x04 — DOCX is a zip archive

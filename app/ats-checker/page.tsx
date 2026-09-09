@@ -7,7 +7,7 @@ export default function AtsCheckerPage() {
       <SiteNav />
       <main className="mx-auto w-full max-w-[880px] px-24 py-48 sm:px-48 sm:py-80">
         <span className="font-arial text-[14px] uppercase tracking-[0.12em] text-berry-lipstick">
-          ATS checker
+          ATS readiness
         </span>
         <h1 className="mt-24 font-matter text-heading font-medium leading-none text-platinum">
           See what an ATS reads.

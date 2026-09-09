@@ -4,7 +4,8 @@ import MobileNav, { type NavLink } from "./MobileNav";
 /** Shared by the desktop cluster and the mobile drawer so they can't drift. */
 const NAV_LINKS: readonly NavLink[] = [
   { label: "How it works", href: "#how-it-works" },
-  { label: "ATS checker", href: "/ats-checker" },
+  { label: "ATS readiness", href: "/ats-checker" },
+  { label: "ATS JD checker", href: "/ats-jd-checker" },
 ];
 
 // Lives inside the landing hero, which is `pointer-events-none` so drag and

@@ -1,5 +1,8 @@
 import { runAtsReport } from "@/lib/ats/engine";
 import type { ATSReport } from "@/lib/ats/types";
+import { MAX_JOB_DESCRIPTION_CHARS } from "@/lib/ats-jd/constants";
+import { matchJobDescription } from "@/lib/ats-jd/engine";
+import type { JDMatch } from "@/lib/ats-jd/types";
 import { extractDocx } from "@/lib/resume/extractDocx";
 import { extractPdf } from "@/lib/resume/extractPdf";
 import { ResumeParseError } from "@/lib/resume/errors";
@@ -32,12 +35,28 @@ export async function POST(request: Request) {
 
     if (Number.isFinite(declaredLength) && declaredLength > MAX_UPLOAD_BYTES) {
       return Response.json(
-        { error: `Resume must be smaller than ${MAX_RESUME_LABEL}` },
+        { error: "Upload exceeds the total request size limit" },
         { status: 413 }
       );
     }
 
     const formData = await request.formData();
+    const jobDescription = formData.get("jobDescription");
+
+    if (jobDescription !== null) {
+      if (typeof jobDescription !== "string" || !jobDescription.trim()) {
+        return Response.json(
+          { error: "Job description must be non-empty text" },
+          { status: 400 }
+        );
+      }
+      if (jobDescription.length > MAX_JOB_DESCRIPTION_CHARS) {
+        return Response.json(
+          { error: `Job description must be ${MAX_JOB_DESCRIPTION_CHARS.toLocaleString("en-US")} characters or fewer` },
+          { status: 400 }
+        );
+      }
+    }
 
     const file = formData.get("resume");
 
@@ -120,11 +139,25 @@ export async function POST(request: Request) {
       console.error(error);
     }
 
+    let jdMatch: JDMatch | undefined;
+    if (typeof jobDescription === "string") {
+      try {
+        jdMatch = matchJobDescription(text, jobDescription);
+      } catch {
+        // Do not log document contents, including errors from the matcher.
+        return Response.json(
+          { error: "Failed to match the job description. Please try again." },
+          { status: 500 }
+        );
+      }
+    }
+
     return Response.json({
       text,
       filename: file.name,
       characters: text.length,
       report,
+      jdMatch,
     });
   } catch (error) {
     console.error(error);
